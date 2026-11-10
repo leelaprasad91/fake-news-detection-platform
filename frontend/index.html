@@ -1,1 +1,150 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><title>Verity | Fake News Detection</title></head><body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fake News Detection Platform</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f3f6fb;
+      color: #182338;
+    }
+    header {
+      background: #172554;
+      color: white;
+      padding: 24px 8%;
+    }
+    header h1 { margin: 0 0 8px; }
+    header p { margin: 0; color: #dbeafe; }
+    main {
+      max-width: 850px;
+      margin: 45px auto;
+      padding: 0 20px;
+    }
+    .panel {
+      background: white;
+      padding: 28px;
+      border-radius: 14px;
+      box-shadow: 0 5px 25px #15213b12;
+    }
+    textarea {
+      width: 100%;
+      min-height: 170px;
+      padding: 14px;
+      margin-top: 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font: inherit;
+      resize: vertical;
+    }
+    button {
+      margin-top: 16px;
+      padding: 13px 22px;
+      background: #2563eb;
+      color: white;
+      border: 0;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .6; cursor: wait; }
+    #result {
+      display: none;
+      margin-top: 24px;
+      padding: 18px;
+      background: #eff6ff;
+      border-radius: 8px;
+      overflow-wrap: anywhere;
+    }
+    #message { white-space: pre-wrap; }
+    .note { color: #64748b; font-size: 13px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Fake News Detection Platform</h1>
+    <p>AI-assisted news text analysis</p>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>Analyze a News Article</h2>
+      <p>Paste a news headline or article below to get an experimental model prediction.</p>
+
+      <form id="newsForm">
+        <label for="newsText"><strong>News text</strong></label>
+        <textarea id="newsText" placeholder="Paste your news article here..." required></textarea>
+        <button id="submitBtn" type="submit">Detect News</button>
+      </form>
+
+      <div id="result" aria-live="polite">
+        <h3>Analysis Result</h3>
+        <p id="prediction"></p>
+        <p id="confidence"></p>
+        <p id="message"></p>
+      </div>
+
+      <p class="note">
+        Important: This is an experimental demonstration model, not a verified
+        fact-checking system. Predictions may be incorrect.
+      </p>
+    </section>
+  </main>
+
+  <script>
+    const form = document.getElementById("newsForm");
+    const result = document.getElementById("result");
+    const button = document.getElementById("submitBtn");
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const text = document.getElementById("newsText").value.trim();
+      if (!text) return;
+
+      button.disabled = true;
+      button.textContent = "Analyzing...";
+      result.style.display = "block";
+      document.getElementById("prediction").textContent = "";
+      document.getElementById("confidence").textContent = "";
+      document.getElementById("message").textContent = "Connecting to the ML service...";
+
+      try {
+        const response = await fetch("http://127.0.0.1:8000/predict", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || "The prediction request failed.");
+        }
+
+        document.getElementById("prediction").textContent =
+          "Prediction: " + (data.prediction ?? "Not provided");
+
+        const score = Number(data.confidence);
+        document.getElementById("confidence").textContent =
+          "Model confidence: " +
+          (Number.isFinite(score)
+            ? (score <= 1 ? score * 100 : score).toFixed(2) + "%"
+            : "Not provided");
+
+        document.getElementById("message").textContent =
+          data.disclaimer || "This result is a model prediction, not verified fact.";
+      } catch (error) {
+        document.getElementById("message").textContent =
+          "Could not connect to the ML service. Ensure the API is running on port 8000. Details: " +
+          error.message;
+      } finally {
+        button.disabled = false;
+        button.textContent = "Detect News";
+      }
+    });
+  </script>
+</body>
+</html>
